@@ -10,14 +10,16 @@
       forAllSystems = f: lib.genAttrs lib.systems.flakeExposed (s: f nixpkgs.legacyPackages.${s});
     in
     {
-      packages = forAllSystems (pkgs: {
-        default = pkgs.callPackage ./nix/package.nix { };
-      });
       nixosModules.default = ./nix/os-module.nix;
+      homeManagerModules.default = ./nix/hm-module.nix;
 
+      packages = forAllSystems (pkgs: {
+        meowtd-receive = pkgs.callPackage ./nix/packages/receive.nix { };
+      });
+
+      formatter = forAllSystems (pkgs: pkgs.callPackage ./nix/formatter.nix { });
       devShells = forAllSystems (pkgs: {
         default = pkgs.callPackage ./nix/shell.nix { };
       });
-      formatter = forAllSystems (pkgs: pkgs.callPackage ./nix/formatter.nix { });
     };
 }

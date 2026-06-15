@@ -56,7 +56,7 @@ in
 
     package = mkOption {
       type = types.package;
-      default = pkgs.callPackage ./package.nix { };
+      default = pkgs.callPackage ./packages/receive.nix { };
       description = "the meowtd package";
     };
   };
