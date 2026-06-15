@@ -2,6 +2,7 @@ const std = @import("std");
 const fmt = std.fmt;
 
 const Build = std.Build;
+const Step = Build.Step;
 const Module = Build.Module;
 const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
@@ -35,18 +36,40 @@ fn mod(self: *Self, comptime path: []const u8) *Module {
 
 fn exe(self: *Self, comptime name: []const u8, root_module: *Module) Error!void {
     const b = self.b;
-    const allocator = b.allocator;
 
     const e = b.addExecutable(.{ .name = name, .root_module = root_module });
     b.installArtifact(e);
 
-    const cmd = b.addRunArtifact(e);
-    cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |a| cmd.addArgs(a);
+    try self.install_step(name, e);
+    try self.run_step(name, e);
+}
+
+fn install_step(self: *Self, comptime name: []const u8, artifact: *Step.Compile) Error!void {
+    const b = self.b;
+    const allocator = b.allocator;
+
+    const step_description =
+        try fmt.allocPrint(allocator, "Copy {s} build artifacts to prefix path", .{name});
+
+    const step = b.step(name, step_description);
+    step.dependOn(&artifact.step);
+
+    const cmd = b.addInstallArtifact(artifact, .{});
+    step.dependOn(&cmd.step);
+}
+
+fn run_step(self: *Self, comptime name: []const u8, artifact: *Step.Compile) Error!void {
+    const b = self.b;
+    const allocator = b.allocator;
 
     const step_name = try fmt.allocPrint(allocator, "run-{s}", .{name});
-    const step_description = try fmt.allocPrint(allocator, "compile and run {s}", .{name});
+    const step_description =
+        try fmt.allocPrint(allocator, "Run {s} build artifacts", .{name});
 
     const step = b.step(step_name, step_description);
+    step.dependOn(&artifact.step);
+
+    const cmd = b.addRunArtifact(artifact);
+    if (b.args) |a| cmd.addArgs(a);
     step.dependOn(&cmd.step);
 }
