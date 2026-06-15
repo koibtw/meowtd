@@ -14,6 +14,7 @@
       homeManagerModules.default = ./nix/hm-module.nix;
 
       packages = forAllSystems (pkgs: {
+        meowtd = pkgs.callPackage ./nix/packages/send.nix { };
         meowtd-receive = pkgs.callPackage ./nix/packages/receive.nix { };
       });
 

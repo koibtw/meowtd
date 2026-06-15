@@ -6,13 +6,13 @@ const Dir = Io.Dir;
 const File = Io.File;
 
 const env = @import("env.zig");
-const console = @import("console.zig");
+const console = @import("util").console;
 
 const Config = @import("config.zig");
 
 // main =========================================================================================
 
-pub fn main(init: std.process.Init) void {
+pub fn main(init: process.Init) void {
     const env_map = init.environ_map;
     const io = init.io;
 

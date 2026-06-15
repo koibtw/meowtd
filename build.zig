@@ -3,6 +3,8 @@ const fmt = std.fmt;
 
 const Build = std.Build;
 const Step = Build.Step;
+const Compile = Step.Compile;
+const TranslateC = Step.TranslateC;
 const Module = Build.Module;
 const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
@@ -21,13 +23,35 @@ pub fn build(b: *Build) Error!void {
 
     var self: Self = .{ .b = b, .target = target, .optimize = optimize };
 
-    try self.exe("meowtd-receive", self.mod("src/receive/main.zig"));
+    const util = self.mod("src/util/root.zig");
+    const libssh2 = self.c("src/send/libssh2.h");
+    libssh2.linkSystemLibrary("libssh2", .{});
+
+    const send = self.mod("src/send/main.zig");
+    send.addImport("util", util);
+    send.addImport("libssh2", libssh2.createModule());
+
+    const receive = self.mod("src/receive/main.zig");
+    receive.addImport("util", util);
+
+    try self.exe("meowtd", send);
+    try self.exe("meowtd-receive", receive);
 }
 
 fn mod(self: *Self, comptime path: []const u8) *Module {
     const b = self.b;
 
     return b.createModule(.{
+        .root_source_file = b.path(path),
+        .target = self.target,
+        .optimize = self.optimize,
+    });
+}
+
+fn c(self: *Self, comptime path: []const u8) *TranslateC {
+    const b = self.b;
+
+    return b.addTranslateC(.{
         .root_source_file = b.path(path),
         .target = self.target,
         .optimize = self.optimize,
@@ -44,7 +68,7 @@ fn exe(self: *Self, comptime name: []const u8, root_module: *Module) Error!void 
     try self.run_step(name, e);
 }
 
-fn install_step(self: *Self, comptime name: []const u8, artifact: *Step.Compile) Error!void {
+fn install_step(self: *Self, comptime name: []const u8, artifact: *Compile) Error!void {
     const b = self.b;
     const allocator = b.allocator;
 
@@ -58,7 +82,7 @@ fn install_step(self: *Self, comptime name: []const u8, artifact: *Step.Compile)
     step.dependOn(&cmd.step);
 }
 
-fn run_step(self: *Self, comptime name: []const u8, artifact: *Step.Compile) Error!void {
+fn run_step(self: *Self, comptime name: []const u8, artifact: *Compile) Error!void {
     const b = self.b;
     const allocator = b.allocator;
 
