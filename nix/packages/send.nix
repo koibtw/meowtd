@@ -2,6 +2,8 @@
   lib,
   stdenv,
   callPackage,
+  pkg-config,
+  libssh2,
   zig,
 }:
 stdenv.mkDerivation (finalAttrs: {
@@ -9,9 +11,11 @@ stdenv.mkDerivation (finalAttrs: {
   version = "0.1.0";
   src = ../..;
 
+  buildInputs = [ libssh2 ];
   nativeBuildInputs = [
-    zig
+    pkg-config
     (callPackage ./hook.nix { })
+    zig
   ];
 
   dontUseZigInstall = true;
