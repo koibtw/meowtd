@@ -27,7 +27,7 @@ pub fn main(init: process.Init) void {
 
 const MessageError = error{TooLong};
 fn check_message(config: Config, message: []const u8) MessageError!void {
-    if (message.len > config.max_length) return error.TooLong;
+    if (config.max_length != 0 and message.len > config.max_length) return error.TooLong;
 }
 
 const WriteError = File.OpenError || File.WriteFilePositionalError;
