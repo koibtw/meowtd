@@ -1,5 +1,4 @@
 const std = @import("std");
-const process = std.process;
 
 const Io = std.Io;
 const Dir = Io.Dir;
@@ -8,12 +7,16 @@ const Writer = Io.Writer;
 
 const env = @import("env.zig");
 
-const Message = @import("shared").Message;
+const util = @import("util.zig");
+
+const die = util.die;
+const success = util.success;
+
 const Config = @import("config.zig");
 
 // main =========================================================================================
 
-pub fn main(init: process.Init) void {
+pub fn main(init: std.process.Init) void {
     const env_map = init.environ_map;
     const io = init.io;
 
@@ -44,24 +47,4 @@ fn write_message(io: Io, path: []const u8, command: []const u8) WriteError!void 
 
     try file.writePositionalAll(io, command, 0);
     if (command[command.len - 1] != '\n') try file.writePositionalAll(io, "\n", command.len);
-}
-
-// util =========================================================================================
-
-fn success(w: *Writer) Writer.Error!void {
-    try Message.writeType(w, .success);
-    try w.flush();
-}
-
-fn failure(w: *Writer, e: anyerror, comptime msg: []const u8) Writer.Error!void {
-    try Message.writeType(w, .failure);
-    try w.writeAll(msg);
-    try w.writeAll(": ");
-    try w.writeAll(@errorName(e));
-    try w.flush();
-}
-
-fn die(w: *Writer, e: anyerror, comptime msg: []const u8) noreturn {
-    failure(w, e, msg) catch {};
-    process.exit(1);
 }
