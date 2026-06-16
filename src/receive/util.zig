@@ -10,7 +10,7 @@ pub fn success(w: *Writer) Writer.Error!void {
     try w.flush();
 }
 
-fn failure(w: *Writer, e: anyerror, comptime msg: []const u8) Writer.Error!void {
+fn failure(w: *Writer, e: anyerror, msg: []const u8) Writer.Error!void {
     try Message.writeType(w, .failure);
     try w.writeAll(msg);
     try w.writeAll(": ");
@@ -18,7 +18,7 @@ fn failure(w: *Writer, e: anyerror, comptime msg: []const u8) Writer.Error!void 
     try w.flush();
 }
 
-pub fn die(w: *Writer, e: anyerror, comptime msg: []const u8) noreturn {
+pub fn die(w: *Writer, e: anyerror, msg: []const u8) noreturn {
     failure(w, e, msg) catch {};
     process.exit(1);
 }

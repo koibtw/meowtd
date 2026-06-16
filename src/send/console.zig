@@ -2,7 +2,7 @@ const log = @import("std").log;
 
 // util =========================================================================================
 
-pub fn err(e: ?anyerror, comptime msg: []const u8) void {
+pub fn err(e: ?anyerror, msg: []const u8) void {
     if (e == null)
         log.err("{s} failed", .{msg})
     else

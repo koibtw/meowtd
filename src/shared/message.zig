@@ -13,7 +13,7 @@ pub const Type = enum(T) {
 
 // write ========================================================================================
 
-pub fn writeType(w: *Writer, comptime msg_type: Type) Writer.Error!void {
+pub fn writeType(w: *Writer, msg_type: Type) Writer.Error!void {
     try switch (msg_type) {
         .success => w.writeByte('0'),
         .failure => w.writeByte('1'),

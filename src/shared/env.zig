@@ -8,7 +8,7 @@ pub const CMD = "SSH_ORIGINAL_COMMAND";
 
 // util =========================================================================================
 
-pub fn get(map: *Environ.Map, comptime key: []const u8) ?[]const u8 {
+pub fn get(map: *Environ.Map, key: []const u8) ?[]const u8 {
     if (map.get(key)) |v| if (v.len != 0) return v;
     return null;
 }

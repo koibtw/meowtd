@@ -191,7 +191,7 @@ fn cr(ret: c_int) CError!void {
 }
 
 // TODO: real errors with libssh2_session_last_error and so on
-fn die(e: ?anyerror, comptime msg: []const u8) noreturn {
+fn die(e: ?anyerror, msg: []const u8) noreturn {
     console.err(e, msg);
     c.libssh2_exit();
     process.exit(1);
