@@ -10,7 +10,8 @@ const util = @import("util.zig");
 const die = util.die;
 const success = util.success;
 
-const env = @import("shared").env;
+const shared = @import("shared");
+const env = shared.env;
 
 const Config = @import("config.zig");
 
@@ -20,7 +21,7 @@ pub fn main(init: std.process.Init) void {
     const env_map = init.environ_map;
     const io = init.io;
 
-    var writer_buf: [128]u8 = undefined;
+    var writer_buf: [shared.IO_SIZE]u8 = undefined;
     var writer = File.stdout().writer(io, &writer_buf);
     const w = &writer.interface;
 
