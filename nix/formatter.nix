@@ -1,11 +1,13 @@
 {
   treefmt,
   nixfmt,
+  shfmt,
   zig,
 }:
 treefmt.withConfig {
   runtimeInputs = [
     nixfmt
+    shfmt
     zig
   ];
   settings = {
@@ -15,6 +17,14 @@ treefmt.withConfig {
       nixfmt = {
         command = "nixfmt";
         includes = [ "*.nix" ];
+      };
+      shfmt = {
+        command = "shfmt";
+        options = [
+          "-i=2"
+          "-w"
+        ];
+        includes = [ "*.sh" ];
       };
       zigfmt = {
         command = "zig";
