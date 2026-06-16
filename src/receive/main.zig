@@ -25,7 +25,8 @@ pub fn main(init: std.process.Init) void {
     const w = &writer.interface;
 
     const config = Config.from_environ_map(env_map) catch |e| die(w, e, "loding config");
-    const command = env.get(env_map, env.CMD) orelse die(w, error.NoMessage, "reading command");
+    const command = env.get(env_map, .SSH_ORIGINAL_COMMAND) orelse
+        die(w, error.NoMessage, "reading command");
 
     check_message(config, command) catch |e| die(w, e, "invalid message");
     write_message(io, config.path, command) catch |e| die(w, e, "writing motd file");

@@ -6,12 +6,12 @@ const Writer = std.Io.Writer;
 const Message = @import("shared").Message;
 
 pub fn success(w: *Writer) Writer.Error!void {
-    try Message.writeType(w, .success);
+    try Message.Type.success.write(w);
     try w.flush();
 }
 
 fn failure(w: *Writer, e: anyerror, msg: []const u8) Writer.Error!void {
-    try Message.writeType(w, .failure);
+    try Message.Type.failure.write(w);
     try w.writeAll(msg);
     try w.writeAll(": ");
     try w.writeAll(@errorName(e));

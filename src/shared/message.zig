@@ -9,6 +9,13 @@ pub const T = u1;
 pub const Type = enum(T) {
     success,
     failure,
+
+    pub fn write(self: Type, w: *Writer) Writer.Error!void {
+        try switch (self) {
+            .success => w.writeByte('0'),
+            .failure => w.writeByte('1'),
+        };
+    }
 };
 
 // write ========================================================================================

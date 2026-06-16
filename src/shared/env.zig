@@ -1,14 +1,20 @@
 const Environ = @import("std").process.Environ;
 
-// constants ====================================================================================
+// key ==========================================================================================
 
-pub const PATH = "MEOWTD_PATH";
-pub const LEN = "MEOWTD_MAX_LENGTH";
-pub const CMD = "SSH_ORIGINAL_COMMAND";
+pub const Key = enum {
+    MEOWTD_PATH,
+    MEOWTD_MAX_LENGTH,
+
+    SSH_ORIGINAL_COMMAND,
+
+    USER,
+    HOME,
+};
 
 // util =========================================================================================
 
-pub fn get(map: *Environ.Map, key: []const u8) ?[]const u8 {
-    if (map.get(key)) |v| if (v.len != 0) return v;
+pub fn get(map: *Environ.Map, key: Key) ?[]const u8 {
+    if (map.get(@tagName(key))) |v| if (v.len != 0) return v;
     return null;
 }

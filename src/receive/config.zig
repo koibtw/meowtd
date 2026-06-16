@@ -17,10 +17,10 @@ max_length: usize = 1024,
 
 pub const Error = error{NoUser} || fmt.ParseIntError;
 pub fn from_environ_map(map: *Environ.Map) Error!Self {
-    var self: Self = .{ .user = env.get(map, "USER") orelse return error.NoUser };
+    var self: Self = .{ .user = env.get(map, .USER) orelse return error.NoUser };
 
-    if (env.get(map, env.PATH)) |v| self.path = v;
-    if (env.get(map, env.LEN)) |v| self.max_length = try fmt.parseInt(usize, v, 10);
+    if (env.get(map, .MEOWTD_PATH)) |v| self.path = v;
+    if (env.get(map, .MEOWTD_MAX_LENGTH)) |v| self.max_length = try fmt.parseInt(usize, v, 10);
 
     return self;
 }
