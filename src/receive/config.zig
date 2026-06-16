@@ -3,7 +3,7 @@ const fmt = std.fmt;
 
 const Environ = std.process.Environ;
 
-const env = @import("env.zig");
+const env = @import("shared").env;
 
 // struct =======================================================================================
 

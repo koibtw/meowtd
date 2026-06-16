@@ -5,12 +5,12 @@ const Dir = Io.Dir;
 const File = Io.File;
 const Writer = Io.Writer;
 
-const env = @import("env.zig");
-
 const util = @import("util.zig");
 
 const die = util.die;
 const success = util.success;
+
+const env = @import("shared").env;
 
 const Config = @import("config.zig");
 

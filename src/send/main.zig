@@ -1,5 +1,3 @@
-const builtin = @import("builtin");
-
 const std = @import("std");
 const process = std.process;
 const mem = std.mem;
@@ -10,14 +8,15 @@ const Io = std.Io;
 const Stream = net.Stream;
 const HostName = net.HostName;
 
+const builtin = @import("builtin");
+const console = @import("console.zig");
+
 const c = @import("libssh2");
 
 const Session = c.LIBSSH2_SESSION;
 const Channel = c.LIBSSH2_CHANNEL;
 
 const HOSTKEY_HASH_SHA256 = c.LIBSSH2_HOSTKEY_HASH_SHA256;
-
-const console = @import("console.zig");
 
 const Message = @import("shared").Message;
 
