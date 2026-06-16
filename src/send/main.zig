@@ -15,7 +15,11 @@ const c = @import("libssh2");
 const Session = c.LIBSSH2_SESSION;
 const Channel = c.LIBSSH2_CHANNEL;
 
-const console = @import("util").console;
+const HOSTKEY_HASH_SHA256 = c.LIBSSH2_HOSTKEY_HASH_SHA256;
+
+const console = @import("console.zig");
+
+const Message = @import("shared").Message;
 
 // constants ====================================================================================
 
@@ -27,7 +31,7 @@ const KEY = "/home/koi/.ssh/id_ed25519";
 const KEY_PUB = "/home/koi/.ssh/id_ed25519.pub";
 const KEY_PASS = null;
 
-const COMMAND = "date";
+const COMMAND = "meowtd test :3";
 
 // main =========================================================================================
 
@@ -47,25 +51,27 @@ pub fn main(init: process.Init) void {
         die(e, "opening channel");
     };
 
-    execute(channel) catch |e| {
+    const exit_status = execute(channel) catch |e| {
         close(channel);
         disconnect(session);
         stream.close(io);
-        die(e, "sending data");
+        die(e, "executing");
     };
 
     // channel is already closed in execute()
     disconnect(session);
     stream.close(io);
     c.libssh2_exit();
+
+    process.exit(exit_status);
 }
 
 // init =========================================================================================
 
-const InitError = error{ SSHInitFailed, SessionInitFailed };
+const InitError = error{ SshInitFailed, SessionInitFailed };
 fn initialize() InitError!*Session {
     log.debug("initializing SSH session", .{});
-    cr(c.libssh2_init(0)) catch return error.SSHInitFailed;
+    cr(c.libssh2_init(0)) catch return error.SshInitFailed;
 
     const session = c.libssh2_session_init_wrapped() orelse return error.SessionInitFailed;
     if (builtin.mode == .Debug) _ = c.libssh2_trace(session, ~@as(c_int, 0));
@@ -96,8 +102,7 @@ fn open(session: *Session, stream: Stream) OpenError!*Channel {
 
     // TODO: fingerprint verification with known_hosts maybe
     //       idk tho we dont really need it tbh cause like what someones gonna MITM a MOTD lol
-
-    const fingerprint = c.libssh2_hostkey_hash(session, c.LIBSSH2_HOSTKEY_HASH_SHA256);
+    const fingerprint = c.libssh2_hostkey_hash(session, HOSTKEY_HASH_SHA256);
 
     if (fingerprint == null)
         log.warn("failed to obtain host fingerprint", .{})
@@ -129,27 +134,41 @@ fn open(session: *Session, stream: Stream) OpenError!*Channel {
 
 // execute ======================================================================================
 
-const ExecError =
-    error{ CommandRequestFailed, ReadStdoutFailed, ReadStderrFailed, ChannelWaitClosedFailed };
-fn execute(channel: *Channel) ExecError!void {
+const ExecError = error{
+    CommandRequestFailed,
+    ReadStdoutFailed,
+    ReadStderrFailed,
+    ChannelWaitEofFailed,
+    ChannelWaitClosedFailed,
+};
+fn execute(channel: *Channel) ExecError!u8 {
     log.debug("sending command: {s}", .{COMMAND});
     cr(c.libssh2_channel_exec_wrapped(channel, COMMAND)) catch return error.CommandRequestFailed;
 
-    log.debug("reading stdout until EOF", .{});
-    var buf: [1024]u8 = undefined;
-    while (c.libssh2_channel_eof(channel) == 0) {
-        const read = c.libssh2_channel_read(channel, &buf, buf.len);
-        if (read < 0) return error.ReadStderrFailed;
+    log.debug("reading stdout", .{});
+    var buf: [128]u8 = undefined;
+    const read = c.libssh2_channel_read(channel, &buf, buf.len);
+    if (read < 0) return error.ReadStderrFailed;
 
-        // TODO: make this smart and handle communication internally
-        std.debug.print("{s}", .{buf[0..@intCast(read)]});
+    b: {
+        const response = Message.parse(buf[0..@intCast(read)]) catch {
+            log.err("parsing response", .{});
+            break :b;
+        };
+        switch (response.msg_type) {
+            .success => log.info("success", .{}),
+            .failure => log.err("{s}", .{response.content}),
+        }
     }
 
     log.debug("waiting for the channel to close", .{});
+    cr(c.libssh2_channel_wait_eof(channel)) catch return error.ChannelWaitEofFailed;
     cr(c.libssh2_channel_wait_closed(channel)) catch return error.ChannelWaitClosedFailed;
 
     const exit_status = c.libssh2_channel_get_exit_status(channel);
     log.debug("exit status: {d}", .{exit_status});
+
+    return @intCast(exit_status);
 }
 
 // cleanup ======================================================================================

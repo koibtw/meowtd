@@ -2,9 +2,9 @@ const Environ = @import("std").process.Environ;
 
 // constants ====================================================================================
 
-pub const K_PATH = "MEOWTD_PATH";
-pub const K_LEN = "MEOWTD_MAX_LENGTH";
-pub const K_CMD = "SSH_ORIGINAL_COMMAND";
+pub const PATH = "MEOWTD_PATH";
+pub const LEN = "MEOWTD_MAX_LENGTH";
+pub const CMD = "SSH_ORIGINAL_COMMAND";
 
 // util =========================================================================================
 

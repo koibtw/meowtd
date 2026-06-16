@@ -23,16 +23,16 @@ pub fn build(b: *Build) Error!void {
 
     var self: Self = .{ .b = b, .target = target, .optimize = optimize };
 
-    const util = self.mod("src/util/root.zig");
+    const shared = self.mod("src/shared/root.zig");
     const libssh2 = self.c("src/send/libssh2.h");
     libssh2.linkSystemLibrary("libssh2", .{});
 
     const send = self.mod("src/send/main.zig");
-    send.addImport("util", util);
+    send.addImport("shared", shared);
     send.addImport("libssh2", libssh2.createModule());
 
     const receive = self.mod("src/receive/main.zig");
-    receive.addImport("util", util);
+    receive.addImport("shared", shared);
 
     try self.exe("meowtd", send);
     try self.exe("meowtd-receive", receive);
