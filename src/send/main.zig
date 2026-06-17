@@ -23,8 +23,8 @@ pub fn main(init: process.Init) void {
         .config = config,
     };
 
-    client.sessionInit() catch |e| client.die(e, "session initialization");
     client.streamConnect() catch |e| client.die(e, "connecting stream");
+    client.sessionInit() catch |e| client.die(e, "session initialization");
     client.channelOpen() catch |e| client.die(e, "opening channel");
 
     client.send() catch |e| client.die(e, "sending data");

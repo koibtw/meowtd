@@ -39,10 +39,27 @@ io: Io,
 config: Config,
 message: []const u8,
 
+stream: ?Stream = null,
+
 session: ?*Session = null,
 channel: ?*Channel = null,
 
-stream: ?Stream = null,
+// stream =======================================================================================
+
+pub const StreamConnectError = HostName.ValidateError || HostName.ConnectError;
+pub fn streamConnect(self: *Self) StreamConnectError!void {
+    const address = self.config.address;
+    const port = self.config.port;
+
+    log.debug("connecting to {s}:{d}", .{ address, port });
+
+    const hostname = try HostName.init(address);
+    self.stream = try hostname.connect(self.io, port, .{
+        .mode = .stream,
+        .protocol = .tcp,
+        .timeout = .none, // TODO: set timeout
+    });
+}
 
 // session ======================================================================================
 
@@ -170,23 +187,6 @@ fn parseResponse(buf: []const u8) Message.ParseError!void {
         .success => log.info("{s}", .{response.content}),
         .failure => log.err("{s}", .{response.content}),
     }
-}
-
-// stream =======================================================================================
-
-pub const StreamConnectError = HostName.ValidateError || HostName.ConnectError;
-pub fn streamConnect(self: *Self) StreamConnectError!void {
-    const address = self.config.address;
-    const port = self.config.port;
-
-    log.debug("connecting to {s}:{d}", .{ address, port });
-
-    const hostname = try HostName.init(address);
-    self.stream = try hostname.connect(self.io, port, .{
-        .mode = .stream,
-        .protocol = .tcp,
-        .timeout = .none, // TODO: set timeout
-    });
 }
 
 // deinit =======================================================================================
