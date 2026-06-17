@@ -2,7 +2,13 @@ const std = @import("std");
 const json = std.json;
 const mem = std.mem;
 
-const Allocator = std.mem.Allocator;
+const Io = std.Io;
+const Dir = Io.Dir;
+const File = Io.File;
+const Allocator = mem.Allocator;
+const Environ = std.process.Environ;
+
+const env = @import("shared").env;
 
 // struct =======================================================================================
 
@@ -35,9 +41,35 @@ pub const Auth = struct {
 // parse ========================================================================================
 
 pub const ParseError = json.ParseError(json.Scanner) || Auth.Key.InferPublicError;
-pub fn parse(alloc: Allocator, slice: []const u8) ParseError!json.Parsed(Self) {
-    var parsed = try json.parseFromSlice(Self, alloc, slice, .{ .allocate = .alloc_if_needed });
+pub fn parse(alloc: Allocator, slice: []const u8) ParseError!Self {
+    var parsed = try json.parseFromSlice(Self, alloc, slice, .{ .allocate = .alloc_always });
     try parsed.value.auth.key.inferPublic(alloc);
 
-    return parsed;
+    return parsed.value;
+}
+
+// read =========================================================================================
+
+pub const ReadError = ParseError || FilePathError || File.OpenError || File.ReadPositionalError;
+pub fn read(io: Io, alloc: Allocator, env_map: *Environ.Map) ReadError!Self {
+    const file = try Dir.openFileAbsolute(
+        io,
+        try filePath(alloc, env_map),
+        .{ .allow_directory = false },
+    );
+
+    var buf: [1024]u8 = undefined;
+    const bytes = try file.readPositionalAll(io, &buf, 0);
+
+    return try parse(alloc, buf[0..bytes]);
+}
+
+pub const FilePathError = Allocator.Error || error{NoHome};
+fn filePath(alloc: Allocator, map: *Environ.Map) FilePathError![]const u8 {
+    const config_home = env.get(map, .XDG_CONFIG_HOME) orelse b: {
+        const home = env.get(map, .HOME) orelse return error.NoHome;
+        break :b try mem.concat(alloc, u8, &.{ home, "/.config" });
+    };
+
+    return try mem.concat(alloc, u8, &.{ config_home, "/meowtd/config.json" });
 }
