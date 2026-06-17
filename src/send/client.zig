@@ -20,6 +20,7 @@ const Message = shared.Message;
 
 const builtin = @import("builtin");
 const output = @import("output.zig");
+const util = @import("util.zig");
 
 const Config = @import("config.zig");
 
@@ -74,25 +75,31 @@ pub fn channelOpen(self: *Self) ChannelOpenError!void {
         return error.OpenFailed;
 }
 
-pub const AuthenticateError = error{ AuthUnsupported, AuthFailed };
+pub const AuthenticateError = error{ NullPubkey, AuthUnsupported, AuthFailed };
 fn authenticate(session: *Session, data: Config.Auth) AuthenticateError!void {
     const listC = c.libssh2_userauth_list(
         session,
-        cs(data.username),
+        data.username.ptr,
         @intCast(data.username.len),
     ) orelse return error.AuthUnsupported;
 
     const list = mem.span(listC);
     if (!mem.containsAtLeast(u8, list, 1, "publickey")) return error.AuthUnsupported;
 
-    log.debug("authenticating as {s} with {s}", .{ data.username, data.key.private });
+    const pubkey = data.key.public orelse return error.NullPubkey;
+
+    log.debug("authenticating as {s} with {s} and {s}", .{
+        data.username,
+        data.key.private,
+        pubkey,
+    });
 
     cr(c.libssh2_userauth_publickey_fromfile(
         session,
-        cs(data.username),
-        cs(data.key.public),
-        cs(data.key.private),
-        cs(data.key.passphrase),
+        data.username.ptr,
+        pubkey.ptr,
+        data.key.private.ptr,
+        if (data.key.passphrase) |p| p.ptr else null,
     )) catch return error.AuthFailed;
 }
 
@@ -141,7 +148,7 @@ pub fn send(self: *Self) SendError!void {
 
     cr(c.libssh2_channel_exec_wrapped(
         channel,
-        cs(self.message),
+        self.message.ptr,
     )) catch return error.CommandRequestFailed;
 }
 
@@ -212,13 +219,13 @@ fn cr(ret: c_int) CError!void {
     if (ret < 0) return error.FunctionFailed;
 }
 
-fn cs(slice: ?[]const u8) [*c]const u8 {
-    return @as([*c]const u8, @ptrCast(slice));
-}
+pub fn die(self: *Self, e: anyerror, msg: []const u8) noreturn {
+    if (self.session) |session| {
+        var message: ?[*:0]u8 = null;
+        const code = c.libssh2_session_last_error(session, @ptrCast(&message), null, 0);
+        log.err("libssh2 ({d}): {s}", .{ code, message orelse "No error message" });
+    }
 
-// TODO: real errors with libssh2_session_last_error and so on
-pub fn die(self: *Self, e: ?anyerror, msg: []const u8) noreturn {
-    output.err(e, msg);
     self.deinit();
-    process.exit(1);
+    util.die(e, msg);
 }

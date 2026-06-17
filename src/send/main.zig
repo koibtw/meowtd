@@ -1,26 +1,33 @@
 const std = @import("std");
 const process = std.process;
 
+const util = @import("util.zig");
+
+const Config = @import("config.zig");
 const Client = @import("client.zig");
 
 // main =========================================================================================
 
 pub fn main(init: process.Init) void {
+    const alloc = init.arena.allocator();
+    const io = init.io;
+
+    const config = Config.parse(alloc,
+        \\{
+        \\  "address": "localhost",
+        \\  "auth": {
+        \\    "username": "koi",
+        \\    "key": {
+        \\      "private": "/home/koi/.ssh/id_ed25519"
+        \\    }
+        \\  }
+        \\}
+    ) catch |e| util.die(e, "parsing config");
+
     var client: Client = .{
-        .io = init.io,
+        .io = io,
         .message = "meowtd test :3",
-        .config = .{
-            .address = "localhost",
-            .port = 22,
-            .auth = .{
-                .username = "koi",
-                .key = .{
-                    .public = "/home/koi/.ssh/id_ed25519.pub",
-                    .private = "/home/koi/.ssh/id_ed25519",
-                    .passphrase = null,
-                },
-            },
-        },
+        .config = config.value,
     };
 
     client.sessionInit() catch |e| client.die(e, "session initialization");
