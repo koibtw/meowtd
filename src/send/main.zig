@@ -14,10 +14,13 @@ pub fn main(init: process.Init) void {
     const env_map = init.environ_map;
     const io = init.io;
 
+    var config_buf: [1024]u8 = undefined;
+    const config = Config.read(io, alloc, env_map, &config_buf) catch |e| util.die(e, "reading config");
+
     var client: Client = .{
         .io = io,
         .message = "meowtd test :3",
-        .config = Config.read(io, alloc, env_map) catch |e| util.die(e, "reading config"),
+        .config = config,
     };
 
     client.sessionInit() catch |e| client.die(e, "session initialization");
