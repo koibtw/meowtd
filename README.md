@@ -107,7 +107,7 @@ meowtd is configured with a json file in `$XDG_CONFIG_HOME/meowtd/config.json` u
   "address": "your-ip-or-hostname",
   "port": 22,                                // optional (default: 22)
   "auth": {
-    "username": "meower",
+    "username": "meowtd",                    // optional (default: meowtd)
     "key": {
       "private": "/path/to/your/ssh_key",
       "public": "/path/to/your/ssh_key.pub", // optional (default: private with the .pub suffix)

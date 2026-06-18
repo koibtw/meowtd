@@ -22,7 +22,7 @@ auth: Auth,
 // auth =========================================================================================
 
 pub const Auth = struct {
-    username: [:0]const u8,
+    username: [:0]const u8 = "meowtd",
     key: Key,
 
     pub const Key = struct {
