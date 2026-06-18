@@ -94,7 +94,7 @@ fi
 
 ## client configuration
 
-meowtd is configured with a json file in `$XDG_CONFIG_HOME/meowtd/config.json` usually
+MeOwTD is configured with a json file in `$XDG_CONFIG_HOME/meowtd/config.json` usually
 (`~/.config/meowtd/config.json`)
 
 <details>
