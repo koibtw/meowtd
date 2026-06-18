@@ -11,15 +11,19 @@ const Client = @import("client.zig");
 
 pub fn main(init: process.Init) void {
     const alloc = init.arena.allocator();
+    const args = init.minimal.args.vector;
     const env_map = init.environ_map;
     const io = init.io;
 
     var config_buf: [1024]u8 = undefined;
-    const config = Config.read(io, alloc, env_map, &config_buf) catch |e| util.die(e, "reading config");
+    const config = Config.read(io, alloc, env_map, &config_buf) catch |e|
+        util.die(e, "reading config");
+
+    if (args.len < 2) util.die(error.NoMessage, "parsing arguments");
 
     var client: Client = .{
         .io = io,
-        .message = "meowtd test :3",
+        .message = args[1],
         .config = config,
     };
 

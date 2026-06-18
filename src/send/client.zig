@@ -37,7 +37,7 @@ const Self = @This();
 io: Io,
 
 config: Config,
-message: []const u8,
+message: [*:0]const u8,
 
 stream: ?Stream = null,
 
@@ -165,7 +165,7 @@ pub fn send(self: *Self) SendError!void {
 
     cr(c.libssh2_channel_exec_wrapped(
         channel,
-        self.message.ptr,
+        self.message,
     )) catch return error.CommandRequestFailed;
 }
 
