@@ -30,45 +30,55 @@ pub const Auth = struct {
         public: ?[:0]const u8 = null,
         passphrase: ?[:0]const u8 = null,
 
-        pub const InferPublicError = Allocator.Error;
-        pub fn inferPublic(self: *Key, alloc: Allocator) InferPublicError!void {
+        pub const Error = Allocator.Error;
+
+        pub fn expandPrivatePath(self: *Key, alloc: Allocator, home: []const u8) Error!void {
+            if (!mem.startsWith(u8, self.private, "~/")) return;
+            self.private = try mem.concatWithSentinel(alloc, u8, &.{
+                home,
+                self.private[1..],
+            }, 0);
+        }
+
+        pub fn inferPublic(self: *Key, alloc: Allocator) Error!void {
             if (self.public != null) return;
-            self.public = try mem.concatWithSentinel(alloc, u8, &.{ self.private, ".pub" }, 0);
+            self.public = try mem.concatWithSentinel(alloc, u8, &.{
+                self.private,
+                ".pub",
+            }, 0);
         }
     };
 };
 
-// parse ========================================================================================
-
-pub const ParseError = json.ParseError(json.Scanner) || Auth.Key.InferPublicError;
-pub fn parse(alloc: Allocator, slice: []const u8) ParseError!Self {
-    var parsed = try json.parseFromSlice(Self, alloc, slice, .{ .allocate = .alloc_if_needed });
-    try parsed.value.auth.key.inferPublic(alloc);
-
-    return parsed.value;
-}
-
 // read =========================================================================================
 
-pub const ReadError = ParseError || FilePathError || File.OpenError || File.ReadPositionalError;
-pub fn read(io: Io, alloc: Allocator, env_map: *Environ.Map, buf: []u8) ReadError!Self {
+pub const ReadError = Auth.Key.Error || File.OpenError || File.ReadPositionalError ||
+    Allocator.Error || json.ParseError(json.Scanner) || error{NoHome};
+pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8) ReadError!Self {
+    const home = env.get(map, .HOME) orelse return error.NoHome;
+    const config_home = env.get(map, .XDG_CONFIG_HOME) orelse
+        try mem.concat(alloc, u8, &.{ home, "/.config" });
+
     const file = try Dir.openFileAbsolute(
         io,
-        try filePath(alloc, env_map),
+        try mem.concat(alloc, u8, &.{
+            config_home,
+            "/meowtd/config.json",
+        }),
         .{ .allow_directory = false },
     );
 
     const bytes = try file.readPositionalAll(io, buf, 0);
 
-    return try parse(alloc, buf[0..bytes]);
-}
+    var parsed = (try json.parseFromSlice(
+        Self,
+        alloc,
+        buf[0..bytes],
+        .{ .allocate = .alloc_if_needed },
+    )).value;
 
-pub const FilePathError = Allocator.Error || error{NoHome};
-fn filePath(alloc: Allocator, map: *Environ.Map) FilePathError![]const u8 {
-    const config_home = env.get(map, .XDG_CONFIG_HOME) orelse b: {
-        const home = env.get(map, .HOME) orelse return error.NoHome;
-        break :b try mem.concat(alloc, u8, &.{ home, "/.config" });
-    };
+    try parsed.auth.key.expandPrivatePath(alloc, home);
+    try parsed.auth.key.inferPublic(alloc);
 
-    return try mem.concat(alloc, u8, &.{ config_home, "/meowtd/config.json" });
+    return parsed;
 }
