@@ -18,7 +18,7 @@ let
 in
 {
   options.services.meowtd = {
-    enable = mkEnableOption "meowtd";
+    enable = mkEnableOption "meowtd receiver";
 
     file = mkOption {
       type = types.str;
@@ -57,7 +57,7 @@ in
     package = mkOption {
       type = types.package;
       default = pkgs.callPackage ./packages/receive.nix { };
-      description = "the meowtd package";
+      description = "the meowtd-receive package";
     };
   };
 

@@ -11,8 +11,8 @@ it comes with an integrated CLI client for easy access :3
 
 ## how to set up
 
-if you're on NixOS, the [flake](./flake.nix) contains a full [NixOS module](./nix/os-module.nix)
-that you can use
+if you're on NixOS, the [flake](./flake.nix) contains both a [NixOS module](./nix/os-module.nix)
+and a [home-manager module](./nix/hm-module.nix) that you can use
 
 there's also an [AUR package](https://aur.archlinux.org/packages/meowtd) for Arch users :3
 
