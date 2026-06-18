@@ -1,7 +1,6 @@
 const std = @import("std");
 const process = std.process;
 const mem = std.mem;
-const log = std.log;
 const net = Io.net;
 
 const Io = std.Io;
@@ -19,8 +18,8 @@ const shared = @import("shared");
 const Message = shared.Message;
 
 const builtin = @import("builtin");
-const output = @import("output.zig");
 const util = @import("util.zig");
+const log = @import("log.zig");
 
 const Config = @import("config.zig");
 
@@ -57,7 +56,7 @@ pub fn streamConnect(self: *Self) StreamConnectError!void {
     self.stream = try hostname.connect(self.io, port, .{
         .mode = .stream,
         .protocol = .tcp,
-        .timeout = .none, // TODO: set timeout
+        .timeout = .none, // panics with: TODO implement netConnectIpPosix with timeout
     });
 }
 
@@ -116,7 +115,7 @@ fn authenticate(session: *Session, data: Config.Auth) AuthenticateError!void {
         data.username.ptr,
         pubkey.ptr,
         data.key.private.ptr,
-        if (data.key.passphrase) |p| p.ptr else null,
+        if (data.key.passphrase) |p| p.ptr else null, // TODO: get passphrase from stdin
     )) catch return error.AuthFailed;
 }
 
@@ -125,12 +124,12 @@ fn authenticate(session: *Session, data: Config.Auth) AuthenticateError!void {
 fn obtainFingerprint(session: *Session) void {
     const fingerprint = c.libssh2_hostkey_hash(session, c.LIBSSH2_HOSTKEY_HASH_SHA256);
     if (fingerprint == null)
-        log.warn("failed to obtain host fingerprint", .{})
+        log.warn(null, "failed to obtain host fingerprint")
     else if (builtin.mode == .Debug) {
         var writer_buf: [6 + FP_SIZE * 2]u8 = undefined;
         var writer = Writer.fixed(&writer_buf);
         encodeFingerprint(&writer, fingerprint[0..FP_SIZE]) catch |e|
-            output.warn(e, "failed to encode host fingerprint");
+            log.warn(e, "failed to encode host fingerprint");
         log.debug("host fingerprint: {s}", .{writer.buffer});
     }
 }
@@ -178,14 +177,14 @@ pub fn readResponse(self: *Self) ReadResponseError!void {
     var buf: [shared.IO_SIZE]u8 = undefined;
     const read = c.libssh2_channel_read(channel, &buf, buf.len);
     if (read < 0) return error.IoReadFailed;
-    parseResponse(buf[0..@intCast(read)]) catch |e| output.err(e, "parsing response");
+    parseResponse(buf[0..@intCast(read)]) catch |e| log.err(e, "parsing response");
 }
 
 fn parseResponse(buf: []const u8) Message.ParseError!void {
     const response = try Message.parse(buf);
     switch (response.msg_type) {
         .success => log.info("{s}", .{response.content}),
-        .failure => log.err("{s}", .{response.content}),
+        .failure => log.errRaw("{s}", .{response.content}),
     }
 }
 
@@ -223,7 +222,7 @@ pub fn die(self: *Self, e: anyerror, msg: []const u8) noreturn {
     if (self.session) |session| {
         var message: ?[*:0]u8 = null;
         const code = c.libssh2_session_last_error(session, @ptrCast(&message), null, 0);
-        log.err("libssh2 ({d}): {s}", .{ code, message orelse "No error message" });
+        log.errRaw("libssh2 ({d}): {s}", .{ code, message orelse "No error message" });
     }
 
     self.deinit();

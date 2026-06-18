@@ -9,6 +9,7 @@ const Allocator = mem.Allocator;
 const Environ = std.process.Environ;
 
 const env = @import("shared").env;
+const log = @import("log.zig");
 
 // struct =======================================================================================
 
@@ -58,16 +59,14 @@ pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8) ReadError!Se
     const home = env.get(map, .HOME) orelse return error.NoHome;
     const config_home = env.get(map, .XDG_CONFIG_HOME) orelse
         try mem.concat(alloc, u8, &.{ home, "/.config" });
+    const path = try mem.concat(alloc, u8, &.{
+        config_home,
+        "/meowtd/config.json",
+    });
 
-    const file = try Dir.openFileAbsolute(
-        io,
-        try mem.concat(alloc, u8, &.{
-            config_home,
-            "/meowtd/config.json",
-        }),
-        .{ .allow_directory = false },
-    );
+    log.debug("reading config from {s}", .{path});
 
+    const file = try Dir.openFileAbsolute(io, path, .{ .allow_directory = false });
     const bytes = try file.readPositionalAll(io, buf, 0);
 
     var parsed = (try json.parseFromSlice(
