@@ -2,7 +2,9 @@ const std = @import("std");
 const process = std.process;
 const mem = std.mem;
 
+const log = @import("log.zig");
 const util = @import("util.zig");
+const args = @import("args.zig");
 
 const Config = @import("config.zig");
 const Client = @import("client.zig");
@@ -11,19 +13,22 @@ const Client = @import("client.zig");
 
 pub fn main(init: process.Init) void {
     const alloc = init.arena.allocator();
-    const args = init.minimal.args.vector;
     const env_map = init.environ_map;
     const io = init.io;
+
+    log.init(io);
+
+    var args_iter = init.minimal.args.iterate();
+    const message = args.parse(alloc, &args_iter) catch |e| util.die(e, "parsing arguments");
+    args_iter.deinit();
 
     var config_buf: [1024]u8 = undefined;
     const config = Config.read(io, alloc, env_map, &config_buf) catch |e|
         util.die(e, "reading config");
 
-    if (args.len < 2) util.die(error.NoMessage, "parsing arguments");
-
     var client: Client = .{
         .io = io,
-        .message = args[1],
+        .message = message,
         .config = config,
     };
 

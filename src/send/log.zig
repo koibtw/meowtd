@@ -1,9 +1,35 @@
 const builtin = @import("builtin");
-const log = @import("std").log;
 
-// variables ====================================================================================
+const std = @import("std");
+const log = std.log;
+
+const Io = std.Io;
+const File = Io.File;
+const Writer = Io.Writer;
+
+// stdout =======================================================================================
+
+var out_buf: [1024]u8 = undefined;
+var out_writer: File.Writer = undefined;
+
+pub fn init(io: Io) void {
+    out_writer = File.stdout().writer(io, &out_buf);
+}
+
+pub fn out(comptime format: []const u8, args: anytype) void {
+    const w = &out_writer.interface;
+
+    w.print(format ++ "\n", args) catch |e| err(e, "printing to stdout");
+    w.flush() catch |e| err(e, "flushing stdout");
+}
+
+// verbose ======================================================================================
 
 var verbose = builtin.mode == .Debug;
+
+pub fn setVerbose() void {
+    verbose = true;
+}
 
 // raw ==========================================================================================
 

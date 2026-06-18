@@ -36,7 +36,7 @@ const Self = @This();
 io: Io,
 
 config: Config,
-message: [*:0]const u8,
+message: [:0]const u8,
 
 stream: ?Stream = null,
 
