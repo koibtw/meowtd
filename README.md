@@ -14,6 +14,8 @@ it comes with an integrated CLI client for easy access :3
 if you're on NixOS, the [flake](./flake.nix) contains a full [NixOS module](./nix/os-module.nix)
 that you can use
 
+there's also an [AUR package](https://aur.archlinux.org/packages/meowtd) for Arch users :3
+
 on non-NixOS systems, theres two ways you can set up MeOwTD receiver.
 you can either use the [setup bash script](./setup.sh) or do it manually
 
