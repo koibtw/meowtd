@@ -66,13 +66,14 @@ do_install() {
 }
 
 do_user() {
-  check_env 'useradd'
+  check_env 'groupadd' 'useradd'
 
   if [[ ! -x /bin/sh ]]; then
     die 'shell not found or is not executable: /bin/sh'
   fi
 
   info 'creating system user and group'
+  groupadd meowtd
   useradd \
     --system \
     --create-home \
