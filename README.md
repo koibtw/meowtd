@@ -25,14 +25,11 @@ you can either use the [setup bash script](./setup.sh) or do it manually
 1. clone the repository
 2. run
    ```bash
-   bash setup.sh install # to build and install the binaries (if not installed any other way)
-   bash setup.sh user    # to set up the system user and permissions
+   bash setup.sh install                   # to build and install the binaries (if not installed any other way)
+   bash setup.sh user                      # to set up the system user and permissions
+   bash setup.sh add-key 'YOUR-SSH-PUBKEY' # to add an authorized key
    ```
-3. configure authorized keys
-   ```bash
-   echo 'command="exec /usr/bin/meowtd-receive",restrict YOUR-SSH-PUBKEY' | tee -a /var/lib/meowtd/.ssh/authorized_keys
-   ```
-4. enable your SSH server with public key authentication
+3. enable your SSH server with public key authentication
 
 </details>
 <details>
