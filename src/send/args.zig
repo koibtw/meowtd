@@ -51,8 +51,7 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
 
         if (arg.len >= 2 and arg[0] == '-') {
             for (OPTIONS) |opt| {
-                const is_long = arg[1] == '-' and mem.eql(u8, arg[2..], opt.long);
-                if (is_long or mem.eql(u8, arg[1..], opt.short)) {
+                if (arg[1] == '-' and mem.eql(u8, arg[2..], opt.arg) or arg[1] == opt.arg[0]) {
                     try opt.function(
                         &result,
                         if (opt.needs_arg)
@@ -94,8 +93,7 @@ fn setMsg(message: *?[:0]const u8, warned: *bool, content: [:0]const u8) void {
 // option =======================================================================================
 
 const Option = struct {
-    short: [:0]const u8,
-    long: [:0]const u8,
+    arg: [:0]const u8,
     function: *const fn (*Parsed, ?[:0]const u8) ParseError!void,
     needs_arg: bool = false,
     description: []const u8,
@@ -105,34 +103,29 @@ const Option = struct {
 
 const OPTIONS = [_]Option{
     .{
-        .short = "v",
-        .long = "verbose",
+        .arg = "verbose",
         .function = &verbose,
         .description = "enable debug logging",
     },
     .{
-        .short = "h",
-        .long = "help",
+        .arg = "help",
         .function = &help,
         .description = "show cli help",
     },
     .{
-        .short = "p",
-        .long = "port",
+        .arg = "port",
         .function = &setPort,
         .needs_arg = true,
         .description = "set target port",
     },
     .{
-        .short = "a",
-        .long = "address",
+        .arg = "address",
         .function = &setAddress,
         .needs_arg = true,
         .description = "set target address",
     },
     .{
-        .short = "u",
-        .long = "username",
+        .arg = "username",
         .function = &setUsername,
         .needs_arg = true,
         .description = "set target username",
@@ -156,7 +149,7 @@ fn help(_: *Parsed, _: ?[:0]const u8) OptionError!void {
 
     log.out("options:", .{});
     for (OPTIONS) |opt|
-        log.out("  -{s} --{s:<10} {s}", .{ opt.short, opt.long, opt.description });
+        log.out("  -{c} --{s:<10} {s}", .{ opt.arg[0], opt.arg, opt.description });
 
     process.exit(0);
 }
