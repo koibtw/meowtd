@@ -19,16 +19,20 @@ pub fn main(init: process.Init) void {
     log.init(io);
 
     var args_iter = init.minimal.args.iterate();
-    const message = args.parse(alloc, &args_iter) catch |e| util.die(e, "parsing arguments");
+    const args_parsed = args.parse(alloc, &args_iter) catch |e| util.die(e, "parsing arguments");
     args_iter.deinit();
 
     var config_buf: [1024]u8 = undefined;
-    const config = Config.read(io, alloc, env_map, &config_buf) catch |e|
+    var config = Config.read(io, alloc, env_map, &config_buf) catch |e|
         util.die(e, "reading config");
+
+    if (args_parsed.port) |v| config.port = v;
+    if (args_parsed.address) |v| config.address = v;
+    if (args_parsed.username) |v| config.auth.username = v;
 
     var client: Client = .{
         .io = io,
-        .message = message,
+        .message = args_parsed.message,
         .config = config,
     };
 

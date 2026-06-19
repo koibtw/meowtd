@@ -1,5 +1,6 @@
 const std = @import("std");
 const process = std.process;
+const fmt = std.fmt;
 const mem = std.mem;
 
 const Args = process.Args;
@@ -15,36 +16,57 @@ fn name() [:0]const u8 {
     return first orelse "meowtd";
 }
 
+// parsed =======================================================================================
+
+pub const Parsed = struct {
+    message: [:0]const u8 = undefined,
+    port: ?u16 = null,
+    address: ?[:0]const u8 = null,
+    username: ?[:0]const u8 = null,
+};
+
 // parse ========================================================================================
 
-pub const ParseError = Allocator.Error || error{ InvalidArgument, InvalidMessage, NoMessage };
-pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError![:0]const u8 {
+pub const ParseError = Allocator.Error || OptionError ||
+    error{ MissingValue, InvalidArgument, InvalidMessage, NoMessage };
+
+pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
     first = iter.next() orelse return error.NoMessage;
 
+    var result: Parsed = .{};
     var message: ?[:0]const u8 = null;
+    var warned = false;
+
     while (iter.next()) |arg| {
         if (mem.eql(u8, arg, "--")) {
             var parts = ArrayList([]const u8).empty;
             defer parts.deinit(alloc);
 
             while (iter.next()) |part| try parts.append(alloc, part);
-            if (parts.items.len > 0) message = try mem.joinZ(alloc, " ", parts.items);
+            if (parts.items.len > 0)
+                setMsg(&message, &warned, try mem.joinZ(alloc, " ", parts.items));
 
             break;
         }
 
         if (arg.len >= 2 and arg[0] == '-') {
-            var valid = false;
-
             for (OPTIONS) |opt| {
                 const is_long = arg[1] == '-' and mem.eql(u8, arg[2..], opt.long);
                 if (is_long or mem.eql(u8, arg[1..], opt.short)) {
-                    opt.function();
-                    valid = true;
-                }
-            }
+                    try opt.function(
+                        &result,
+                        if (opt.needs_arg)
+                            iter.next() orelse {
+                                log.errRaw("missing value for argument: {s}", .{arg});
+                                return error.MissingValue;
+                            }
+                        else
+                            null,
+                    );
 
-            if (!valid) {
+                    break;
+                }
+            } else {
                 log.errRaw("unknown argument: {s}", .{arg});
                 return error.InvalidArgument;
             }
@@ -52,16 +74,21 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError![:0]const u8 {
             continue;
         }
 
-        if (message == null) {
-            message = arg;
-        } else {
-            log.warnRaw("got multiple messages", .{});
-            log.warnRaw("only the last message will be sent", .{});
-            log.warnRaw("for raw input, use: {s} -- <message>", .{name()});
-        }
+        setMsg(&message, &warned, arg);
     }
 
-    return message orelse return error.NoMessage;
+    result.message = message orelse return error.NoMessage;
+    return result;
+}
+
+fn setMsg(message: *?[:0]const u8, warned: *bool, content: [:0]const u8) void {
+    if (!warned.* and message.* != null) {
+        log.warnRaw("got multiple messages", .{});
+        log.warnRaw("only the last message will be sent", .{});
+        log.warnRaw("for raw input, use: {s} -- <message>", .{name()});
+        warned.* = true;
+    }
+    message.* = content;
 }
 
 // option =======================================================================================
@@ -69,7 +96,8 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError![:0]const u8 {
 const Option = struct {
     short: [:0]const u8,
     long: [:0]const u8,
-    function: *const fn () void,
+    function: *const fn (*Parsed, ?[:0]const u8) ParseError!void,
+    needs_arg: bool = false,
     description: []const u8,
 };
 
@@ -88,15 +116,38 @@ const OPTIONS = [_]Option{
         .function = &help,
         .description = "show cli help",
     },
+    .{
+        .short = "p",
+        .long = "port",
+        .function = &setPort,
+        .needs_arg = true,
+        .description = "set target port",
+    },
+    .{
+        .short = "a",
+        .long = "address",
+        .function = &setAddress,
+        .needs_arg = true,
+        .description = "set target address",
+    },
+    .{
+        .short = "u",
+        .long = "username",
+        .function = &setUsername,
+        .needs_arg = true,
+        .description = "set target username",
+    },
 };
 
 // option functions =============================================================================
 
-fn verbose() void {
+pub const OptionError = error{InvalidPort};
+
+fn verbose(_: *Parsed, _: ?[:0]const u8) OptionError!void {
     log.setVerbose();
 }
 
-fn help() void {
+fn help(_: *Parsed, _: ?[:0]const u8) OptionError!void {
     log.out("send cute MOTDs to your (girl|enby|boy)friends' computers :3\n", .{});
 
     log.out("usage:", .{});
@@ -108,4 +159,16 @@ fn help() void {
         log.out("  -{s} --{s:<10} {s}", .{ opt.short, opt.long, opt.description });
 
     process.exit(0);
+}
+
+fn setPort(result: *Parsed, value: ?[:0]const u8) OptionError!void {
+    result.port = fmt.parseInt(u16, value.?, 0) catch return error.InvalidPort;
+}
+
+fn setAddress(result: *Parsed, value: ?[:0]const u8) OptionError!void {
+    result.address = value;
+}
+
+fn setUsername(result: *Parsed, value: ?[:0]const u8) OptionError!void {
+    result.username = value;
 }
