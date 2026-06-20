@@ -29,7 +29,6 @@ pub const Auth = struct {
     pub const Key = struct {
         private: [:0]const u8,
         public: ?[:0]const u8 = null,
-        passphrase: ?[:0]const u8 = null,
 
         pub const Error = Allocator.Error;
 
@@ -51,11 +50,30 @@ pub const Auth = struct {
     };
 };
 
+// raw ==========================================================================================
+
+const Raw = struct {
+    address: ?[]const u8 = null,
+    port: ?u16 = null,
+    auth: RawAuth = .{},
+
+    const RawAuth = struct {
+        username: ?[:0]const u8 = null,
+        key: RawKey = .{},
+
+        const RawKey = struct {
+            private: ?[:0]const u8 = null,
+            public: ?[:0]const u8 = null,
+        };
+    };
+};
+
 // read =========================================================================================
 
 pub const ReadError = Auth.Key.Error || File.OpenError || File.ReadPositionalError ||
-    Allocator.Error || json.ParseError(json.Scanner) || error{NoHome};
-pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8) ReadError!Self {
+    Allocator.Error || json.ParseError(json.Scanner) ||
+    error{ NoHome, MissingAddress, MissingKey };
+pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8, parsed: anytype) ReadError!Self {
     const home = env.get(map, .HOME) orelse return error.NoHome;
     const config_home = env.get(map, .XDG_CONFIG_HOME) orelse
         try mem.concat(alloc, u8, &.{ home, "/.config" });
@@ -66,18 +84,39 @@ pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8) ReadError!Se
 
     log.debug("reading config from {s}", .{path});
 
-    const file = try Dir.openFileAbsolute(io, path, .{ .allow_directory = false });
-    const bytes = try file.readPositionalAll(io, buf, 0);
+    const raw: Raw = blk: {
+        const file = Dir.openFileAbsolute(io, path, .{ .allow_directory = false }) catch |e| switch (e) {
+            error.FileNotFound => break :blk .{},
+            else => return e,
+        };
 
-    var parsed = (try json.parseFromSlice(
-        Self,
-        alloc,
-        buf[0..bytes],
-        .{ .allocate = .alloc_if_needed },
-    )).value;
+        const bytes = try file.readPositionalAll(io, buf, 0);
 
-    try parsed.auth.key.expandPrivatePath(alloc, home);
-    try parsed.auth.key.inferPublic(alloc);
+        break :blk (try json.parseFromSlice(
+            Raw,
+            alloc,
+            buf[0..bytes],
+            .{ .allocate = .alloc_if_needed },
+        )).value;
+    };
 
-    return parsed;
+    const address = parsed.address orelse raw.address orelse return error.MissingAddress;
+    const private = parsed.key orelse raw.auth.key.private orelse return error.MissingKey;
+
+    var key: Auth.Key = .{
+        .private = private,
+        .public = raw.auth.key.public,
+    };
+
+    try key.expandPrivatePath(alloc, home);
+    try key.inferPublic(alloc);
+
+    return .{
+        .address = address,
+        .port = parsed.port orelse raw.port orelse 22,
+        .auth = .{
+            .username = parsed.username orelse raw.auth.username orelse "meowtd",
+            .key = key,
+        },
+    };
 }

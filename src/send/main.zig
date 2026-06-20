@@ -23,16 +23,13 @@ pub fn main(init: process.Init) void {
     args_iter.deinit();
 
     var config_buf: [1024]u8 = undefined;
-    var config = Config.read(io, alloc, env_map, &config_buf) catch |e|
+    const config = Config.read(io, alloc, env_map, &config_buf, args_parsed) catch |e|
         util.die(e, "reading config");
-
-    if (args_parsed.port) |v| config.port = v;
-    if (args_parsed.address) |v| config.address = v;
-    if (args_parsed.username) |v| config.auth.username = v;
 
     var client: Client = .{
         .io = io,
         .message = args_parsed.message,
+        .passphrase = args_parsed.passphrase,
         .config = config,
     };
 

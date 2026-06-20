@@ -23,6 +23,8 @@ pub const Parsed = struct {
     port: ?u16 = null,
     address: ?[:0]const u8 = null,
     username: ?[:0]const u8 = null,
+    key: ?[:0]const u8 = null,
+    passphrase: ?[:0]const u8 = null,
 };
 
 // parse ========================================================================================
@@ -52,7 +54,7 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
         if (arg.len >= 2 and arg[0] == '-') {
             for (OPTIONS) |opt| {
                 const is_long = arg[1] == '-' and mem.eql(u8, arg[2..], opt.arg);
-                if (is_long or arg.len == 2 and arg[1] == opt.arg[0]) {
+                if (is_long or arg.len == 2 and arg[1] == opt.short()) {
                     try opt.function(
                         &result,
                         if (opt.needs_arg)
@@ -95,9 +97,14 @@ fn setMsg(message: *?[:0]const u8, warned: *bool, content: [:0]const u8) void {
 
 const Option = struct {
     arg: [:0]const u8,
+    arg_short: ?u8 = null,
     function: *const fn (*Parsed, ?[:0]const u8) ParseError!void,
     needs_arg: bool = false,
     description: []const u8,
+
+    pub fn short(self: Option) u8 {
+        return self.arg_short orelse self.arg[0];
+    }
 };
 
 // options ======================================================================================
@@ -131,6 +138,19 @@ const OPTIONS = [_]Option{
         .needs_arg = true,
         .description = "set target username",
     },
+    .{
+        .arg = "key",
+        .function = &setKey,
+        .needs_arg = true,
+        .description = "set private key path",
+    },
+    .{
+        .arg = "passphrase",
+        .arg_short = 's',
+        .function = &setPassphrase,
+        .needs_arg = true,
+        .description = "set private key passphrase",
+    },
 };
 
 // option functions =============================================================================
@@ -150,7 +170,7 @@ fn help(_: *Parsed, _: ?[:0]const u8) OptionError!void {
 
     log.out("options:", .{});
     for (OPTIONS) |opt|
-        log.out("  -{c} --{s:<10} {s}", .{ opt.arg[0], opt.arg, opt.description });
+        log.out("  -{c} --{s:<10} {s}", .{ opt.short(), opt.arg, opt.description });
 
     process.exit(0);
 }
@@ -165,4 +185,12 @@ fn setAddress(result: *Parsed, value: ?[:0]const u8) OptionError!void {
 
 fn setUsername(result: *Parsed, value: ?[:0]const u8) OptionError!void {
     result.username = value;
+}
+
+fn setKey(result: *Parsed, value: ?[:0]const u8) OptionError!void {
+    result.key = value;
+}
+
+fn setPassphrase(result: *Parsed, value: ?[:0]const u8) OptionError!void {
+    result.passphrase = value;
 }

@@ -102,13 +102,12 @@ MeOwTD is configured with a json file in `$XDG_CONFIG_HOME/meowtd/config.json` u
 // theyre added here for clarity
 {
   "address": "your-ip-or-hostname",
-  "port": 22,                                // optional (default: 22)
+  "port": 22,                                // default: 22
   "auth": {
-    "username": "meowtd",                    // optional (default: meowtd)
+    "username": "meowtd",                    // default: meowtd
     "key": {
       "private": "/path/to/your/ssh_key",
-      "public": "/path/to/your/ssh_key.pub", // optional (default: private with the .pub suffix)
-      "passphrase": "supersecretpassword67", // optional, insecure :c will be refactored later !
+      "public": "/path/to/your/ssh_key.pub", // default: private with the .pub suffix
     }
   }
 }

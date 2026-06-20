@@ -37,6 +37,7 @@ io: Io,
 
 config: Config,
 message: [:0]const u8,
+passphrase: ?[:0]const u8,
 
 stream: ?Stream = null,
 
@@ -85,14 +86,18 @@ pub fn channelOpen(self: *Self) ChannelOpenError!void {
     cr(c.libssh2_session_handshake(session, socket)) catch return error.SessionHandshakeFailed;
 
     obtainFingerprint(session);
-    try authenticate(session, self.config.auth);
+    try authenticate(session, self.config.auth, self.passphrase);
 
     self.channel = c.libssh2_channel_open_session_wrapped(session) orelse
         return error.OpenFailed;
 }
 
 pub const AuthenticateError = error{ NullPubkey, AuthUnsupported, AuthFailed };
-fn authenticate(session: *Session, data: Config.Auth) AuthenticateError!void {
+fn authenticate(
+    session: *Session,
+    data: Config.Auth,
+    passphrase: ?[:0]const u8,
+) AuthenticateError!void {
     const listC = c.libssh2_userauth_list(
         session,
         data.username.ptr,
@@ -115,7 +120,7 @@ fn authenticate(session: *Session, data: Config.Auth) AuthenticateError!void {
         data.username.ptr,
         pubkey.ptr,
         data.key.private.ptr,
-        if (data.key.passphrase) |p| p.ptr else null, // TODO: get passphrase from stdin
+        if (passphrase) |p| p.ptr else null,
     )) catch return error.AuthFailed;
 }
 
