@@ -51,7 +51,8 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
 
         if (arg.len >= 2 and arg[0] == '-') {
             for (OPTIONS) |opt| {
-                if (arg[1] == '-' and mem.eql(u8, arg[2..], opt.arg) or arg[1] == opt.arg[0]) {
+                const is_long = arg[1] == '-' and mem.eql(u8, arg[2..], opt.arg);
+                if (is_long or arg.len == 2 and arg[1] == opt.arg[0]) {
                     try opt.function(
                         &result,
                         if (opt.needs_arg)
