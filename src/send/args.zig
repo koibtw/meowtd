@@ -19,9 +19,9 @@ fn name() [:0]const u8 {
 // parsed =======================================================================================
 
 pub const Parsed = struct {
-    message: [:0]const u8 = undefined,
-    port: ?u16 = null,
+    message: [:0]const u8,
     address: ?[:0]const u8 = null,
+    port: ?u16 = null,
     username: ?[:0]const u8 = null,
     key: ?[:0]const u8 = null,
     passphrase: ?[:0]const u8 = null,
@@ -35,7 +35,7 @@ pub const ParseError = Allocator.Error || OptionError ||
 pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
     first = iter.next() orelse return error.NoMessage;
 
-    var result: Parsed = .{};
+    var result: Parsed = .{ .message = undefined };
     var message: ?[:0]const u8 = null;
     var warned = false;
 
@@ -53,8 +53,7 @@ pub fn parse(alloc: Allocator, iter: *Args.Iterator) ParseError!Parsed {
 
         if (arg.len >= 2 and arg[0] == '-') {
             for (OPTIONS) |opt| {
-                const is_long = arg[1] == '-' and mem.eql(u8, arg[2..], opt.arg);
-                if (is_long or arg.len == 2 and arg[1] == opt.short()) {
+                if (opt.matches(arg)) {
                     try opt.function(
                         &result,
                         if (opt.needs_arg)
@@ -104,6 +103,11 @@ const Option = struct {
 
     pub fn short(self: Option) u8 {
         return self.arg_short orelse self.arg[0];
+    }
+
+    pub fn matches(self: Option, arg: [:0]const u8) bool {
+        return (arg[1] == '-' and mem.eql(u8, arg[2..], self.arg)) or
+            (arg.len == 2 and arg[1] == self.short());
     }
 };
 

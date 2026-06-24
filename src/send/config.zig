@@ -1,5 +1,6 @@
 const std = @import("std");
 const json = std.json;
+const meta = std.meta;
 const mem = std.mem;
 
 const Io = std.Io;
@@ -10,6 +11,8 @@ const Environ = std.process.Environ;
 
 const env = @import("shared").env;
 const log = @import("log.zig");
+
+const Parsed = @import("args.zig").Parsed;
 
 // struct =======================================================================================
 
@@ -68,44 +71,55 @@ const Raw = struct {
     };
 };
 
-// read =========================================================================================
+pub const ReadRawError =  File.OpenError || File.ReadPositionalError || json.ParseError(json.Scanner);
+fn readRaw(io: Io, alloc: Allocator, buf: []u8, path: []const u8) ReadRawError!Raw {
+    log.debug("reading raw config from {s}", .{path});
 
-pub const ReadError = Auth.Key.Error || File.OpenError || File.ReadPositionalError ||
-    Allocator.Error || json.ParseError(json.Scanner) ||
-    error{ NoHome, MissingAddress, MissingKey };
-pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8, parsed: anytype) ReadError!Self {
-    const home = env.get(map, .HOME) orelse return error.NoHome;
-    const config_home = env.get(map, .XDG_CONFIG_HOME) orelse
-        try mem.concat(alloc, u8, &.{ home, "/.config" });
-    const path = try mem.concat(alloc, u8, &.{
-        config_home,
-        "/meowtd/config.json",
-    });
-
-    log.debug("reading config from {s}", .{path});
-
-    const raw: Raw = blk: {
-        const file = Dir.openFileAbsolute(io, path, .{ .allow_directory = false }) catch |e| switch (e) {
-            error.FileNotFound => break :blk .{},
+    const file = Dir.openFileAbsolute(io, path, .{ .allow_directory = false }) catch |e|
+        switch (e) {
+            error.FileNotFound => return .{},
             else => return e,
         };
 
-        const bytes = try file.readPositionalAll(io, buf, 0);
+    const bytes = try file.readPositionalAll(io, buf, 0);
 
-        break :blk (try json.parseFromSlice(
-            Raw,
-            alloc,
-            buf[0..bytes],
-            .{ .allocate = .alloc_if_needed },
-        )).value;
-    };
+    return (try json.parseFromSlice(
+        Raw,
+        alloc,
+        buf[0..bytes],
+        .{ .allocate = .alloc_if_needed },
+    )).value;
+}
 
-    const address = parsed.address orelse raw.address orelse return error.MissingAddress;
-    const private = parsed.key orelse raw.auth.key.private orelse return error.MissingKey;
+// read =========================================================================================
+
+pub const ReadError = ReadRawError || Auth.Key.Error || Allocator.Error ||
+    error{ NoHome, MissingAddress, MissingKey };
+pub fn read(
+    io: Io,
+    alloc: Allocator,
+    map: *Environ.Map,
+    buf: []u8,
+    cli: Parsed,
+) ReadError!Self {
+    const home = env.get(map, .HOME) orelse return error.NoHome;
+
+    const raw: ?Raw = if (cli.address == null or cli.username == null or cli.key == null)
+        try readRaw(io, alloc, buf, if (env.get(map, .XDG_CONFIG_HOME)) |xdg|
+            try mem.concat(alloc, u8, &.{ xdg, "/meowtd/config.json" })
+        else
+            try mem.concat(alloc, u8, &.{ home, "/.config/meowtd/config.json" }))
+    else
+        null;
+
+    const address = (cli.address orelse if (raw) |r| r.address else null) orelse return error.MissingAddress;
+    const private = (cli.key orelse if (raw) |r| r.auth.key.private else null) orelse return error.MissingKey;
+    const port = (cli.port orelse if (raw) |r| r.port else null) orelse 22;
+    const username = (cli.username orelse if (raw) |r| r.auth.username else null) orelse "meowtd";
 
     var key: Auth.Key = .{
         .private = private,
-        .public = raw.auth.key.public,
+        .public = if (raw) |r| r.auth.key.public else null,
     };
 
     try key.expandPrivatePath(alloc, home);
@@ -113,9 +127,9 @@ pub fn read(io: Io, alloc: Allocator, map: *Environ.Map, buf: []u8, parsed: anyt
 
     return .{
         .address = address,
-        .port = parsed.port orelse raw.port orelse 22,
+        .port = port,
         .auth = .{
-            .username = parsed.username orelse raw.auth.username orelse "meowtd",
+            .username = username,
             .key = key,
         },
     };

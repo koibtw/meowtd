@@ -1,5 +1,6 @@
 const std = @import("std");
 const process = std.process;
+const heap = std.heap;
 const mem = std.mem;
 
 const log = @import("log.zig");
@@ -29,13 +30,12 @@ pub fn main(init: process.Init) void {
     var client: Client = .{
         .io = io,
         .message = args_parsed.message,
-        .passphrase = args_parsed.passphrase,
         .config = config,
     };
 
     client.streamConnect() catch |e| client.die(e, "connecting stream");
     client.sessionInit() catch |e| client.die(e, "session initialization");
-    client.channelOpen() catch |e| client.die(e, "opening channel");
+    client.channelOpen(args_parsed.passphrase) catch |e| client.die(e, "opening channel");
 
     client.send() catch |e| client.die(e, "sending data");
     client.readResponse() catch |e| client.die(e, "reading response");

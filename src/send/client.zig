@@ -37,7 +37,6 @@ io: Io,
 
 config: Config,
 message: [:0]const u8,
-passphrase: ?[:0]const u8,
 
 stream: ?Stream = null,
 
@@ -77,7 +76,7 @@ pub fn sessionInit(self: *Self) SessionInitError!void {
 
 pub const ChannelOpenError = AuthenticateError ||
     error{ NullStream, NullSession, SessionHandshakeFailed, OpenFailed };
-pub fn channelOpen(self: *Self) ChannelOpenError!void {
+pub fn channelOpen(self: *Self, passphrase: ?[:0]const u8) ChannelOpenError!void {
     const socket = (self.stream orelse return error.NullStream).socket.handle;
     const session = self.session orelse return error.NullSession;
 
@@ -86,7 +85,7 @@ pub fn channelOpen(self: *Self) ChannelOpenError!void {
     cr(c.libssh2_session_handshake(session, socket)) catch return error.SessionHandshakeFailed;
 
     obtainFingerprint(session);
-    try authenticate(session, self.config.auth, self.passphrase);
+    try authenticate(session, self.config.auth, passphrase);
 
     self.channel = c.libssh2_channel_open_session_wrapped(session) orelse
         return error.OpenFailed;
