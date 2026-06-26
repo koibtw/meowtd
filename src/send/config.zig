@@ -71,7 +71,8 @@ const Raw = struct {
     };
 };
 
-pub const ReadRawError =  File.OpenError || File.ReadPositionalError || json.ParseError(json.Scanner);
+pub const ReadRawError = File.OpenError || File.ReadPositionalError ||
+    json.ParseError(json.Scanner);
 fn readRaw(io: Io, alloc: Allocator, buf: []u8, path: []const u8) ReadRawError!Raw {
     log.debug("reading raw config from {s}", .{path});
 
