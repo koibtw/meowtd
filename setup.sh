@@ -94,7 +94,7 @@ do_user() {
 
   info 'setting MOTD permissions'
   chown root:meowtd "$MOTD_PATH"
-  chmod 0644 /etc/motd
+  chmod 0664 /etc/motd
 
   info 'creating SSH config files'
   mkdir -p "$HOME_PATH/.ssh"

@@ -43,7 +43,7 @@ you can either use the [setup bash script](./setup.sh) or do it manually
 3. set `/etc/motd` permissions
    ```bash
    chown root:meowtd /etc/motd
-   chmod 0644 /etc/motd
+   chmod 0664 /etc/motd
    ```
 4. configure authorized keys
    ```bash
