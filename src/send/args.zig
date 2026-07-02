@@ -7,8 +7,9 @@ const Args = process.Args;
 const ArrayList = std.ArrayList;
 const Allocator = mem.Allocator;
 
-const options = @import("options");
 const log = @import("log.zig");
+
+const VERSION = @import("shared").VERSION;
 
 // name =========================================================================================
 
@@ -187,7 +188,7 @@ fn help(_: *Parsed, _: ?[:0]const u8) OptionError!void {
 }
 
 fn version(_: *Parsed, _: ?[:0]const u8) OptionError!void {
-    log.out("{s} v{s}", .{ name(), options.version });
+    log.out("{s} v{s}", .{ name(), VERSION });
     process.exit(0);
 }
 

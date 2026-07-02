@@ -17,6 +17,8 @@ const shared = @import("shared");
 
 const Message = shared.Message;
 
+const VERSION = shared.VERSION;
+
 const builtin = @import("builtin");
 const util = @import("util.zig");
 const log = @import("log.zig");
@@ -186,6 +188,9 @@ pub fn readResponse(self: *Self) ReadResponseError!void {
 
 fn parseResponse(buf: []const u8) Message.ParseError!void {
     const response = try Message.parse(buf);
+
+    if (!mem.eql(u8, VERSION, response.version))
+        log.warnRaw("version mismatch (send: {s}, receive: {s})", .{ VERSION, response.version });
     switch (response.msg_type) {
         .success => log.info("{s}", .{response.content}),
         .failure => log.errRaw("{s}", .{response.content}),
