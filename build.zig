@@ -8,8 +8,9 @@ const TranslateC = Step.TranslateC;
 const Module = Build.Module;
 const ResolvedTarget = Build.ResolvedTarget;
 const OptimizeMode = std.builtin.OptimizeMode;
-
 const Error = std.mem.Allocator.Error;
+
+const zon = @import("build.zig.zon");
 
 const Self = @This();
 
@@ -23,11 +24,15 @@ pub fn build(b: *Build) Error!void {
 
     var self: Self = .{ .b = b, .target = target, .optimize = optimize };
 
+    const options = b.addOptions();
+    options.addOption([]const u8, "version", zon.version);
+
     const shared = self.mod("src/shared/root.zig");
     const libssh2 = self.c("src/send/libssh2.h");
     libssh2.linkSystemLibrary("libssh2", .{});
 
     const send = self.mod("src/send/main.zig");
+    send.addOptions("options", options);
     send.addImport("shared", shared);
     send.addImport("libssh2", libssh2.createModule());
 

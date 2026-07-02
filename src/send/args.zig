@@ -7,6 +7,7 @@ const Args = process.Args;
 const ArrayList = std.ArrayList;
 const Allocator = mem.Allocator;
 
+const options = @import("options");
 const log = @import("log.zig");
 
 // name =========================================================================================
@@ -115,16 +116,6 @@ const Option = struct {
 
 const OPTIONS = [_]Option{
     .{
-        .arg = "verbose",
-        .function = &verbose,
-        .description = "enable debug logging",
-    },
-    .{
-        .arg = "help",
-        .function = &help,
-        .description = "show cli help",
-    },
-    .{
         .arg = "port",
         .function = &setPort,
         .needs_arg = true,
@@ -155,6 +146,22 @@ const OPTIONS = [_]Option{
         .needs_arg = true,
         .description = "set private key passphrase",
     },
+    .{
+        .arg = "verbose",
+        .function = &verbose,
+        .description = "enable debug logging",
+    },
+    .{
+        .arg = "version",
+        .arg_short = 'V',
+        .function = &version,
+        .description = "show version",
+    },
+    .{
+        .arg = "help",
+        .function = &help,
+        .description = "show cli help",
+    },
 };
 
 // option functions =============================================================================
@@ -176,6 +183,11 @@ fn help(_: *Parsed, _: ?[:0]const u8) OptionError!void {
     for (OPTIONS) |opt|
         log.out("  -{c} --{s:<10} {s}", .{ opt.short(), opt.arg, opt.description });
 
+    process.exit(0);
+}
+
+fn version(_: *Parsed, _: ?[:0]const u8) OptionError!void {
+    log.out("{s} v{s}", .{ name(), options.version });
     process.exit(0);
 }
 
