@@ -8,7 +8,7 @@
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "meowtd";
-  version = "0.1.0";
+  version = "0.3.0";
   src = ../..;
 
   buildInputs = [ libssh2 ];
