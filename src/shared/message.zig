@@ -36,7 +36,7 @@ content: []const u8,
 pub const ParseError = fmt.ParseIntError || error{ TooShort, BadVersion };
 pub fn parse(buf: []const u8) ParseError!Self {
     if (buf.len == 0) return error.TooShort;
-    if (buf.len < 6) return error.BadVersion;
+    if (buf.len < 1 + VERSION.len) return error.BadVersion;
 
     const msg_type: Type = @enumFromInt(try fmt.parseInt(T, buf[0..1], 2));
     return .{
