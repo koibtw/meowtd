@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-HOME_PATH='/var/lib/meowtd'
+KEYS_FILE='/etc/ssh/authorized_keys.d/meowtd'
 MOTD_PATH='/etc/motd'
 COLON='\e[2m:\e[0m'
 
@@ -81,9 +81,8 @@ do_user() {
   groupadd meowtd
   useradd \
     --system \
-    --create-home \
+    --no-create-home \
     --shell /bin/sh \
-    --home-dir "$HOME_PATH" \
     --gid meowtd \
     meowtd
 
@@ -96,42 +95,33 @@ do_user() {
   chown root:meowtd "$MOTD_PATH"
   chmod 0664 /etc/motd
 
-  info 'creating SSH config files'
-  mkdir -p "$HOME_PATH/.ssh"
-  touch "$HOME_PATH/.ssh/authorized_keys"
-  chown -R meowtd:meowtd "$HOME_PATH"
-  chmod 0700 "$HOME_PATH/.ssh"
-  chmod 0600 "$HOME_PATH/.ssh/authorized_keys"
-
   local help_cmd=("$0" add-key \'YOUR-SSH-PUBKEY\')
   info 'add authorized keys by running' "${help_cmd[*]}"
 }
 
 do_add_key() {
   local key="$1"
-  local path="$HOME_PATH/.ssh/authorized_keys"
 
-  if [[ ! -f "$path" ]]; then
-    info 'creating' "$path"
-    touch "$path"
+  if [[ ! -f "$KEYS_FILE" ]]; then
+    info 'creating' "$KEYS_FILE"
+    touch "$KEYS_FILE"
   fi
 
-  [[ $(grep -sc "$key\$" "$path") -eq '0' ]] || die 'key already in' "$path"
+  [[ $(grep -sc "$key\$" "$KEYS_FILE") -eq '0' ]] || die 'key already in' "$KEYS_FILE"
 
-  info 'appending to' "$path"
-  echo "command=\"exec /usr/bin/meowtd-receive\",restrict $key" >>"$path"
+  info 'appending to' "$KEYS_FILE"
+  echo "command=\"exec /usr/bin/meowtd-receive\",restrict $key" >>"$KEYS_FILE"
 }
 
 do_remove_key() {
   local key="$1"
-  local path="$HOME_PATH/.ssh/authorized_keys"
   local escaped
 
-  [[ $(grep -sc "$key\$" "$path") -gt '0' ]] || die 'key not in' "$path"
+  [[ $(grep -sc "$key\$" "$KEYS_FILE") -gt '0' ]] || die 'key not in' "$KEYS_FILE"
 
-  info 'removing from' "$path"
+  info 'removing from' "$KEYS_FILE"
   escaped="$(echo "$key" | sed -e 's/[\/&]/\\&/g')"
-  sed -i "/$escaped\$/d" "$path"
+  sed -i "/$escaped\$/d" "$KEYS_FILE"
 }
 
 run() {
